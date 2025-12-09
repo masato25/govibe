@@ -17,10 +17,13 @@ func main() {
 	if allowImg.Empty() {
 		panic("找不到 allow_button.png")
 	}
+	defer allowImg.Close()
+
 	continueImg := gocv.IMRead("continue_button.png", gocv.IMReadColor)
 	if continueImg.Empty() {
 		panic("找不到 continue_button.png")
 	}
+	defer continueImg.Close()
 
 	for {
 		for i := 0; i < numDisplays; i++ {
@@ -29,7 +32,9 @@ func main() {
 			mat, _ := gocv.ImageToMatRGB(img)
 
 			result := gocv.NewMat()
-			gocv.MatchTemplate(mat, allowImg, &result, gocv.TmCcoeffNormed, gocv.NewMat())
+			mask := gocv.NewMat()
+
+			gocv.MatchTemplate(mat, allowImg, &result, gocv.TmCcoeffNormed, mask)
 
 			_, maxVal, _, maxLoc := gocv.MinMaxLoc(result)
 			if maxVal > 0.9 {
@@ -41,10 +46,13 @@ func main() {
 				time.Sleep(1 * time.Second)
 			}
 
-			gocv.MatchTemplate(mat, continueImg, &result, gocv.TmCcoeffNormed, gocv.NewMat())
+			// 重新初始化 result Mat 進行 Continue 按鈕匹配
+			result.Close()
+			result = gocv.NewMat()
+			gocv.MatchTemplate(mat, continueImg, &result, gocv.TmCcoeffNormed, mask)
 
 			_, maxVal, _, maxLoc = gocv.MinMaxLoc(result)
-			if maxVal > 0.98 {
+			if maxVal > 0.9 { // 降低閾值以提高檢測成功率
 				fmt.Printf("在螢幕 %d 找到 Continue 按鈕! 相似度: %.2f\n", i, maxVal)
 				x := bounds.Min.X + maxLoc.X + continueImg.Cols()/2
 				y := bounds.Min.Y + maxLoc.Y + continueImg.Rows()/2
@@ -55,6 +63,7 @@ func main() {
 
 			mat.Close()
 			result.Close()
+			mask.Close()
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
