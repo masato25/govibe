@@ -28,7 +28,11 @@ func main() {
 	for {
 		for i := 0; i < numDisplays; i++ {
 			bounds := screenshot.GetDisplayBounds(i)
-			img, _ := screenshot.CaptureRect(bounds)
+			img, err := screenshot.CaptureRect(bounds)
+			if err != nil {
+				fmt.Printf("無法擷取螢幕 %d: %v\n", i, err)
+				continue
+			}
 			mat, _ := gocv.ImageToMatRGB(img)
 
 			result := gocv.NewMat()
